@@ -7,6 +7,9 @@ import {
   CalendarDays,
   Check,
   Star,
+  MessageSquare,
+  Send,
+  Bot,
 } from 'lucide-react'
 
 /* ─── Data ─── */
@@ -219,6 +222,130 @@ function AnimatedStep({ children, stepKey }) {
   )
 }
 
+/* ─── AI Chat Widget ─── */
+
+const AI_RESPONSES = {
+  default:
+    "Great question! Based on your kitchen dimensions and style preferences, I'd recommend starting with an L-Shape layout — it maximizes counter space while keeping the work triangle efficient. For a modern look with great value, Fabuwood's shaker line in White Painted with Cambria quartz countertops is our most popular combination. Want me to walk you through the options?",
+  cabinets:
+    "We carry 5 cabinet lines ranging from $8,200 to $31,000 for a standard kitchen. Fabuwood is our best value with solid wood doors and soft-close standard. StarMark is our premium pick — handcrafted in Iowa with unlimited finish combinations. I can help you compare any two lines side by side.",
+  cost:
+    "A typical kitchen remodel at Bay State ranges from $12,000 to $45,000 depending on cabinet line, countertop material, and finish choices. The configurator above will give you a 90% accurate estimate in minutes. Most customers are pleasantly surprised — the number is usually lower than they expected.",
+}
+
+function AiChatWidget() {
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [typing, setTyping] = useState(false)
+  const chatEndRef = useRef(null)
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, typing])
+
+  function pickResponse(text) {
+    const lower = text.toLowerCase()
+    if (lower.includes('cabinet') || lower.includes('brand') || lower.includes('line'))
+      return AI_RESPONSES.cabinets
+    if (lower.includes('cost') || lower.includes('price') || lower.includes('budget') || lower.includes('how much'))
+      return AI_RESPONSES.cost
+    return AI_RESPONSES.default
+  }
+
+  function handleSend(text) {
+    const msg = text || input.trim()
+    if (!msg) return
+    setMessages((m) => [...m, { role: 'user', text: msg }])
+    setInput('')
+    setTyping(true)
+    setTimeout(() => {
+      setMessages((m) => [...m, { role: 'ai', text: pickResponse(msg) }])
+      setTyping(false)
+    }, 1200)
+  }
+
+  return (
+    <div className="mt-6 bg-card rounded-2xl border border-slate-700/50 overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-slate-700/50 flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-lg bg-cyan-accent/10 flex items-center justify-center">
+          <Bot className="w-4 h-4 text-cyan-accent" />
+        </div>
+        <div className="flex-1">
+          <h4 className="text-sm font-semibold text-white">AI Cabinet Expert</h4>
+          <p className="text-[10px] text-muted">Built-in assistant — ask anything</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-[10px] text-green-400 font-medium">Online</span>
+        </div>
+      </div>
+
+      {/* Messages area */}
+      <div className="px-4 py-3 max-h-[200px] overflow-y-auto space-y-3">
+        {messages.length === 0 && (
+          <div className="text-center py-2">
+            <p className="text-xs text-muted mb-3">Try asking:</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {['What cabinets do you carry?', 'How much does a kitchen cost?', 'Help me choose a layout'].map((q) => (
+                <button
+                  key={q}
+                  onClick={() => handleSend(q)}
+                  className="text-[11px] px-3 py-1.5 bg-cyan-accent/10 text-cyan-accent rounded-full hover:bg-cyan-accent/20 transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
+                m.role === 'user'
+                  ? 'bg-cyan-accent text-navy rounded-br-sm'
+                  : 'bg-slate-700/70 text-body rounded-bl-sm'
+              }`}
+            >
+              {m.text}
+            </div>
+          </div>
+        ))}
+        {typing && (
+          <div className="flex justify-start">
+            <div className="bg-slate-700/70 px-4 py-2.5 rounded-xl rounded-bl-sm flex gap-1">
+              <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="px-3 py-2.5 border-t border-slate-700/50 flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="Ask about cabinets, pricing, layouts..."
+          className="flex-1 bg-slate-800/60 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-accent/50 transition-colors min-h-[40px]"
+        />
+        <button
+          onClick={() => handleSend()}
+          disabled={!input.trim()}
+          className="w-10 h-10 rounded-lg bg-cyan-accent flex items-center justify-center hover:bg-cyan-dark transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+        >
+          <Send className="w-4 h-4 text-navy" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ─── App ─── */
 
 export default function App() {
@@ -342,29 +469,34 @@ export default function App() {
 
           {/* Step 1: Kitchen Layout */}
           {step === 1 && (
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              {LAYOUTS.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => selectAndAdvance(setLayout, l.id, l.id)}
-                  className={`${
-                    popId === l.id ? 'select-pop' : ''
-                  } group relative bg-card rounded-xl p-5 text-center border-2 transition-all duration-200 cursor-pointer min-h-[140px] hover:border-cyan-accent/60 hover:bg-card/80 ${
-                    layout === l.id
-                      ? 'border-cyan-accent shadow-[0_0_20px_rgba(6,182,212,0.15)]'
-                      : 'border-slate-700/50'
-                  }`}
-                >
-                  {layout === l.id && (
-                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-cyan-accent flex items-center justify-center">
-                      <Check className="w-4 h-4 text-navy" strokeWidth={3} />
-                    </div>
-                  )}
-                  <LayoutIcon id={l.id} />
-                  <div className="font-semibold text-white text-base">{l.name}</div>
-                  <div className="text-muted text-sm mt-1">{l.dims}</div>
-                </button>
-              ))}
+            <div>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                {LAYOUTS.map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => selectAndAdvance(setLayout, l.id, l.id)}
+                    className={`${
+                      popId === l.id ? 'select-pop' : ''
+                    } group relative bg-card rounded-xl p-5 text-center border-2 transition-all duration-200 cursor-pointer min-h-[140px] hover:border-cyan-accent/60 hover:bg-card/80 ${
+                      layout === l.id
+                        ? 'border-cyan-accent shadow-[0_0_20px_rgba(6,182,212,0.15)]'
+                        : 'border-slate-700/50'
+                    }`}
+                  >
+                    {layout === l.id && (
+                      <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-cyan-accent flex items-center justify-center">
+                        <Check className="w-4 h-4 text-navy" strokeWidth={3} />
+                      </div>
+                    )}
+                    <LayoutIcon id={l.id} />
+                    <div className="font-semibold text-white text-base">{l.name}</div>
+                    <div className="text-muted text-sm mt-1">{l.dims}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* AI Chat Assistant */}
+              <AiChatWidget />
             </div>
           )}
 
